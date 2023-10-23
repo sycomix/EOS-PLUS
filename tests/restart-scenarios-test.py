@@ -33,11 +33,18 @@ parser = argparse.ArgumentParser()
 parser.add_argument("-p", type=int, help="producing nodes count", default=2)
 parser.add_argument("-d", type=int, help="delay between nodes startup", default=1)
 parser.add_argument("-s", type=str, help="topology", default="mesh")
-parser.add_argument("-c", type=str, help="chain strategy[%s|%s|%s]" %
-                    (testUtils.Utils.SyncResyncTag, testUtils.Utils.SyncReplayTag, testUtils.Utils.SyncNoneTag),
-                    default=testUtils.Utils.SyncResyncTag)
-parser.add_argument("--kill-sig", type=str, help="kill signal[%s|%s]" %
-                    (testUtils.Utils.SigKillTag, testUtils.Utils.SigTermTag), default=testUtils.Utils.SigKillTag)
+parser.add_argument(
+    "-c",
+    type=str,
+    help=f"chain strategy[{testUtils.Utils.SyncResyncTag}|{testUtils.Utils.SyncReplayTag}|{testUtils.Utils.SyncNoneTag}]",
+    default=testUtils.Utils.SyncResyncTag,
+)
+parser.add_argument(
+    "--kill-sig",
+    type=str,
+    help=f"kill signal[{testUtils.Utils.SigKillTag}|{testUtils.Utils.SigTermTag}]",
+    default=testUtils.Utils.SigKillTag,
+)
 parser.add_argument("--kill-count", type=int, help="nodeos instances to kill", default=-1)
 parser.add_argument("-v", help="verbose logging", action='store_true')
 parser.add_argument("--dont-kill", help="Leave cluster running after test finishes", action='store_true')
@@ -91,10 +98,10 @@ try:
 
     accountsCount=total_nodes
     walletName="MyWallet"
-    Print("Creating wallet %s if one doesn't already exist." % walletName)
+    Print(f"Creating wallet {walletName} if one doesn't already exist.")
     wallet=walletMgr.create(walletName)
     if wallet is None:
-        errorExit("Failed to create wallet %s" % (walletName))
+        errorExit(f"Failed to create wallet {walletName}")
 
     Print ("Create wallet.")
     if not cluster.populateWallet(accountsCount, wallet):
@@ -156,13 +163,13 @@ finally:
         Print("== Errors see above ==")
 
     if killEosInstances:
-        Print("Shut down the cluster%s" % (" and cleanup." if (testSuccessful and not keepLogs) else "."))
+        Print(
+            f'Shut down the cluster{" and cleanup." if testSuccessful and not keepLogs else "."}'
+        )
         cluster.killall()
         walletMgr.killall()
         if testSuccessful and not keepLogs:
             Print("Cleanup cluster and wallet data.")
             cluster.cleanup()
             walletMgr.cleanup()
-    pass
-
 exit(0)

@@ -38,10 +38,7 @@ amINoon=not args.not_noon
 dumpErrorDetails=args.dump_error_details
 
 killWallet=True
-killEosInstances=True
-if nodesFile is not None:
-    killEosInstances=False
-
+killEosInstances = nodesFile is None
 testUtils.Utils.Debug=debug
 testSuccessful=False
 
@@ -84,10 +81,10 @@ try:
 
     accountsCount=total_nodes
     walletName="MyWallet-%d" % (random.randrange(10000))
-    Print("Creating wallet %s if one doesn't already exist." % walletName)
+    Print(f"Creating wallet {walletName} if one doesn't already exist.")
     wallet=walletMgr.create(walletName)
     if wallet is None:
-        errorExit("Failed to create wallet %s" % (walletName))
+        errorExit(f"Failed to create wallet {walletName}")
 
     Print ("Populate wallet with %d accounts." % (accountsCount))
     if not cluster.populateWallet(accountsCount, wallet):
@@ -116,6 +113,4 @@ finally:
         Print("Shut down the wallet and cleanup.")
         walletMgr.killall()
         walletMgr.cleanup()
-    pass
-
 exit(0)

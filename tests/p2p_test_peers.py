@@ -18,7 +18,7 @@ class P2PTestPeers:
     def exec(remoteCmd, toprint=True):
         for i in range(len(P2PTestPeers.hosts)):
             remoteCmd2 = remoteCmd.replace("{dev}", P2PTestPeers.devs[i])
-            cmd = "ssh " + P2PTestPeers.sshname + "@" + P2PTestPeers.hosts[i] + ' ' + remoteCmd2
+            cmd = f"ssh {P2PTestPeers.sshname}@{P2PTestPeers.hosts[i]} {remoteCmd2}"
             if toprint is True:
-                print("execute:" + cmd)
+                print(f"execute:{cmd}")
             subprocess.call(cmd, shell=True)

@@ -61,7 +61,7 @@ else:
 cluster=testUtils.Cluster(walletd=True, enableMongo=enableMongo, initaPrvtKey=initaPrvtKey, initbPrvtKey=initbPrvtKey, walletHost=args.wallet_host, walletPort=args.wallet_port)
 
 print("BEGIN")
-print("TEST_OUTPUT: %s" % (testOutputFile))
+print(f"TEST_OUTPUT: {testOutputFile}")
 
 print("number of hosts: %d, list of hosts:" % (len(hosts)))
 for i in range(len(hosts)):
@@ -70,7 +70,7 @@ for i in range(len(hosts)):
 init_str='{"nodes":['
 for i in range(len(hosts)):
     if i > 0:
-        init_str=init_str+','
+        init_str = f'{init_str},'
     init_str=init_str+'{"host":"' + hosts[i] + '", "port":'+str(ports[i])+'}'
 init_str=init_str+']}'
 
@@ -109,7 +109,7 @@ exchangeAccount.ownerPublicKey=PUB_KEY2
 
 print("Stand up walletd")
 if walletMgr.launch() is False:
-    cmdError("%s" % (WalletdName))
+    cmdError(f"{WalletdName}")
     errorExit("Failed to stand up eos walletd.")
 
 testWalletName="test"
@@ -117,28 +117,32 @@ Print("Creating wallet \"%s\"." % (testWalletName))
 testWallet=walletMgr.create(testWalletName)
 if testWallet is None:
     cmdError("eos wallet create")
-    errorExit("Failed to create wallet %s." % (testWalletName))
+    errorExit(f"Failed to create wallet {testWalletName}.")
 
 for account in accounts:
-    Print("Importing keys for account %s into wallet %s." % (account.name, testWallet.name))
+    Print(
+        f"Importing keys for account {account.name} into wallet {testWallet.name}."
+    )
     if not walletMgr.importKey(account, testWallet):
-        cmdError("%s wallet import" % (ClientName))
-        errorExit("Failed to import key for account %s" % (account.name))
+        cmdError(f"{ClientName} wallet import")
+        errorExit(f"Failed to import key for account {account.name}")
 
 initaWalletName="inita"
 Print("Creating wallet \"%s\"." % (initaWalletName))
 initaWallet=walletMgr.create(initaWalletName)
 if initaWallet is None:
     cmdError("eos wallet create")
-    errorExit("Failed to create wallet %s." % (initaWalletName))
+    errorExit(f"Failed to create wallet {initaWalletName}.")
 
 initaAccount=testUtils.Cluster.initaAccount
 # initbAccount=testUtils.Cluster.initbAccount
 
-Print("Importing keys for account %s into wallet %s." % (initaAccount.name, initaWallet.name))
+Print(
+    f"Importing keys for account {initaAccount.name} into wallet {initaWallet.name}."
+)
 if not walletMgr.importKey(initaAccount, initaWallet):
-     cmdError("%s wallet import" % (ClientName))
-     errorExit("Failed to import key for account %s" % (initaAccount.name))
+    cmdError(f"{ClientName} wallet import")
+    errorExit(f"Failed to import key for account {initaAccount.name}")
 
 node0=cluster.getNode(0)
 if node0 is None:
@@ -151,9 +155,9 @@ eosio.name = "eosio"
 Print("Info of each node:")
 for i in range(len(hosts)):
     node = cluster.getNode(0)
-    cmd="%s %s get info" % (testUtils.Utils.EosClientPath, node.endpointArgs)
+    cmd = f"{testUtils.Utils.EosClientPath} {node.endpointArgs} get info"
     trans = node.runCmdReturnJson(cmd)
-    Print("host %s: %s" % (hosts[i], trans))
+    Print(f"host {hosts[i]}: {trans}")
 
 
 wastFile="contracts/eosio.system/eosio.system.wast"
@@ -163,7 +167,7 @@ trans=node0.publishContract(eosio.name, wastFile, abiFile, waitForTransBlock=Tru
 if trans is None:
     Utils.errorExit("Failed to publish eosio.system.")
 else:
-    Print("transaction id %s" % (node0.getTransId(trans)))
+    Print(f"transaction id {node0.getTransId(trans)}")
 
 try:
     maxIndex = module.maxIndex()
@@ -171,12 +175,12 @@ try:
         (transIdList, checkacct, expBal, errmsg) = module.execute(cmdInd, node0, testeraAccount, eosio)
 
         if len(transIdList) == 0 and len(checkacct) == 0:
-            errorExit("failed to execute command in host %s:%s" % (hosts[0], errmsg))
+            errorExit(f"failed to execute command in host {hosts[0]}:{errmsg}")
 
         successhosts = []
         attempts = 2
         while attempts > 0 and len(successhosts) < len(hosts):
-            attempts = attempts - 1
+            attempts -= 1
             for i in range(len(hosts)):
                 host = hosts[i]
                 if host in successhosts:
@@ -184,7 +188,7 @@ try:
                 if len(checkacct) > 0:
                     actBal = cluster.getNode(i).getAccountBalance(checkacct)
                     if expBal == actBal:
-                        Print("acct balance verified in host %s" % (host))
+                        Print(f"acct balance verified in host {host}")
                     else:
                         Print("acct balance check failed in host %s, expect %d actual %d" % (host, expBal, actBal))
                 okcount = 0

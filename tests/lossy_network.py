@@ -15,17 +15,16 @@ class LossyNetwork:
 
     def execute(self, cmdInd, node, testerAccount, eosio):
         print("\n==== lossy network test: set loss ratio to %s ====" % (self.args[cmdInd]))
-        RemoteCmd.exec(self.cmd + " " + self.args[cmdInd])
+        RemoteCmd.exec(f"{self.cmd} {self.args[cmdInd]}")
         s=""
-        for i in range(12):
+        for _ in range(12):
             s=s+random.choice("abcdefghijklmnopqrstuvwxyz12345")
         testerAccount.name = s
-        transIdlist = []
-        print("==== creating account %s ====" % (s))
+        print(f"==== creating account {s} ====")
         trans = node.createAccount(testerAccount, eosio, stakedDeposit=0, waitForTransBlock=True)
         if trans is None:
             return ([], "", 0.0, "failed to create account")
-        transIdlist.append(node.getTransId(trans))
+        transIdlist = [node.getTransId(trans)]
         return (transIdlist, "", 0.0, "")
     
     def on_exit(self):

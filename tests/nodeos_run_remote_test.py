@@ -33,21 +33,21 @@ total_nodes=pnodes
 actualTest="tests/nodeos_run_test.py"
 if not amINoon:
     actualTest="tests/eosd_run_test.py"
-testSuccessful=False
-
-if not amINoon:
     testUtils.Utils.iAmNotNoon()
 
 cluster=testUtils.Cluster()
+testSuccessful = False
 try:
     Print("BEGIN")
     cluster.killall()
     cluster.cleanup()
 
-    Print ("producing nodes: %s, non-producing nodes: %d, topology: %s, delay between nodes launch(seconds): %d" %
-           (pnodes, total_nodes-pnodes, topo, delay))
+    Print(
+        "producing nodes: %s, non-producing nodes: %d, topology: %s, delay between nodes launch(seconds): %d"
+        % (total_nodes, 0, topo, delay)
+    )
     Print("Stand up cluster")
-    if cluster.launch(pnodes, total_nodes, topo, delay) is False:
+    if cluster.launch(total_nodes, total_nodes, topo, delay) is False:
         errorExit("Failed to stand up eos cluster.")
 
     Print ("Wait for Cluster stabilization")
@@ -55,10 +55,10 @@ try:
     if not cluster.waitOnClusterBlockNumSync(3):
         errorExit("Cluster never stabilized")
 
-    cmd="%s --dont-launch %s %s" % (actualTest, "-v" if debug else "", "" if amINoon else "--not-noon")
-    Print("Starting up %s test: %s" % ("nodeos" if amINoon else "eosd", actualTest))
+    cmd = f'{actualTest} --dont-launch {"-v" if debug else ""} {"" if amINoon else "--not-noon"}'
+    Print(f'Starting up {"nodeos" if amINoon else "eosd"} test: {actualTest}')
     Print("cmd: %s\n" % (cmd))
-    if 0 != subprocess.call(cmd, shell=True):
+    if subprocess.call(cmd, shell=True) != 0:
         errorExit("failed to run cmd.")
 
     testSuccessful=True

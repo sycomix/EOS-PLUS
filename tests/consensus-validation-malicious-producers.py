@@ -149,25 +149,22 @@ producer-name = inits"""
 zeroExecTime="trans-execution-time = 0"
 
 def getNoMaliciousStagedNodesInfo():
-    stagedNodesInfo=[]
     myConfig00=config00
-    stagedNodesInfo.append(StagedNodeInfo(myConfig00, logging00))
+    stagedNodesInfo = [StagedNodeInfo(myConfig00, logging00)]
     myConfig01=config01+"\n"+producers
     stagedNodesInfo.append(StagedNodeInfo(myConfig01, logging00))
     return stagedNodesInfo
 
 def getMinorityMaliciousProducerStagedNodesInfo():
-    stagedNodesInfo=[]
     myConfig00=config00+"\n"+producers
-    stagedNodesInfo.append(StagedNodeInfo(myConfig00, logging00))
+    stagedNodesInfo = [StagedNodeInfo(myConfig00, logging00)]
     myConfig01=config01+"\n"+zeroExecTime
     stagedNodesInfo.append(StagedNodeInfo(myConfig01, logging00))
     return stagedNodesInfo
 
 def getMajorityMaliciousProducerStagedNodesInfo():
-    stagedNodesInfo=[]
     myConfig00=config00
-    stagedNodesInfo.append(StagedNodeInfo(myConfig00, logging00))
+    stagedNodesInfo = [StagedNodeInfo(myConfig00, logging00)]
     myConfig01=config01+"\n"+producers+"\n"+zeroExecTime
     stagedNodesInfo.append(StagedNodeInfo(myConfig01, logging00))
     return stagedNodesInfo
@@ -178,15 +175,13 @@ def stageScenario(stagedNodeInfos):
     assert(len(stagedNodeInfos) > 1)
 
     os.makedirs(stagingDir)
-    count=0
-    for stagedNodeInfo in stagedNodeInfos:
+    for count, stagedNodeInfo in enumerate(stagedNodeInfos):
         configPath=os.path.join(stagingDir, "etc/eosio/node_%02d" % (count))
         os.makedirs(configPath)
         with open(os.path.join(configPath, "config.ini"), "w") as textFile:
             print(stagedNodeInfo.config,file=textFile)
         with open(os.path.join(configPath, "logging.json"), "w") as textFile:
             print(stagedNodeInfo.logging,file=textFile)
-        count += 1
     return
 
 def cleanStaging():
@@ -201,8 +196,6 @@ def error(msg="", errorCode=1):
     Print("ERROR:", msg)
 
 parser = argparse.ArgumentParser()
-tests=[1,2,3]
-
 parser.add_argument("-t", "--tests", type=str, help="1|2|3 1=run no malicious producers test, 2=minority malicious, 3=majority malicious.", default=None)
 parser.add_argument("-w", type=int, help="system wait time", default=testUtils.Utils.systemWaitTimeout)
 parser.add_argument("-v", help="verbose logging", action='store_true')
@@ -227,9 +220,7 @@ killWallet= not args.dont-kill
 testUtils.Utils.Debug=debug
 
 assert (testsArg is None or testsArg == "1" or testsArg == "2" or testsArg == "3")
-if testsArg is not None:
-    tests=[int(testsArg)]
-
+tests = [int(testsArg)] if testsArg is not None else [1,2,3]
 testUtils.Utils.setSystemWaitTimeout(waitTimeout)
 testUtils.Utils.iAmNotNoon()
 
@@ -250,7 +241,7 @@ def myTest(transWillEnterBlock):
         topo="mesh"
         delay=0
         Print("Stand up cluster")
-        if cluster.launch(pnodes, total_nodes, topo, delay) is False:
+        if cluster.launch(total_nodes, total_nodes, topo, delay) is False:
             error("Failed to stand up eos cluster.")
             return False
 
@@ -270,13 +261,15 @@ def myTest(transWillEnterBlock):
         Print("Creating wallet \"%s\"." % (testWalletName))
         testWallet=walletMgr.create(testWalletName)
         if testWallet is None:
-            error("Failed to create wallet %s." % (testWalletName))
+            error(f"Failed to create wallet {testWalletName}.")
             return False
 
         for account in accounts:
-            Print("Importing keys for account %s into wallet %s." % (account.name, testWallet.name))
+            Print(
+                f"Importing keys for account {account.name} into wallet {testWallet.name}."
+            )
             if not walletMgr.importKey(account, testWallet):
-                error("Failed to import key for account %s" % (account.name))
+                error(f"Failed to import key for account {account.name}")
                 return False
 
         node=cluster.getNode(0)
@@ -287,15 +280,17 @@ def myTest(transWillEnterBlock):
 
         initaAccount=testUtils.Cluster.initaAccount
 
-        Print("Importing keys for account %s into wallet %s." % (initaAccount.name, testWallet.name))
+        Print(
+            f"Importing keys for account {initaAccount.name} into wallet {testWallet.name}."
+        )
         if not walletMgr.importKey(initaAccount, testWallet):
-            error("Failed to import key for account %s" % (initaAccount.name))
+            error(f"Failed to import key for account {initaAccount.name}")
             return False
 
-        Print("Create new account %s via %s" % (currencyAccount.name, initaAccount.name))
+        Print(f"Create new account {currencyAccount.name} via {initaAccount.name}")
         transId=node.createAccount(currencyAccount, initaAccount, stakedDeposit=5000, waitForTransBlock=True)
         if transId is None:
-            error("Failed to create account %s" % (currencyAccount.name))
+            error(f"Failed to create account {currencyAccount.name}")
             return False
 
         wastFile="contracts/currency/currency.wast"
@@ -309,27 +304,16 @@ def myTest(transWillEnterBlock):
         Print("push transfer action to currency contract")
         contract="currency"
         action="transfer"
-        data="{\"from\":\"currency\",\"to\":\"inita\",\"quantity\":"
-        if amINoon:
-            data +="\"00.0050 CUR\",\"memo\":\"test\"}"
-        else:
-            data +="50}"
+        data = "{\"from\":\"currency\",\"to\":\"inita\",\"quantity\":" + (
+            "\"00.0050 CUR\",\"memo\":\"test\"}" if amINoon else "50}"
+        )
         opts="--permission currency@active"
         if not amINoon:
             opts += " --scope currency,inita"
 
         trans=node.pushMessage(contract, action, data, opts, silentErrors=True)
         transInBlock=False
-        if not trans[0]:
-            # On slower systems e.g Travis the transaction rejection can happen immediately
-            #  We want to handle fast and slow failures.
-            if "allocated processing time was exceeded" in trans[1]:
-                Print("Push message transaction immediately failed.")
-            else:
-                error("Exception in push message. %s" % (trans[1]))
-                return False
-
-        else:
+        if trans[0]:
             transId=testUtils.Node.getTransId(trans[1])
 
             Print("verify transaction exists")
@@ -337,34 +321,37 @@ def myTest(transWillEnterBlock):
                 error("Transaction never made it to node2")
                 return False
 
-            Print("Get details for transaction %s" % (transId))
+            Print(f"Get details for transaction {transId}")
             transaction=node2.getTransaction(transId)
             signature=transaction["transaction"]["signatures"][0]
 
-            blockNum=int(transaction["transaction"]["ref_block_num"])
-            blockNum += 1
+            blockNum = int(transaction["transaction"]["ref_block_num"]) + 1
             Print("Our transaction is in block %d" % (blockNum))
 
             block=node2.getBlock(blockNum)
             cycles=block["cycles"]
             if len(cycles) > 0:
-                blockTransSignature=cycles[0][0]["user_input"][0]["signatures"][0]
                 # Print("Transaction signature: %s\nBlock transaction signature: %s" %
                 #       (signature, blockTransSignature))
-                transInBlock=(signature == blockTransSignature)
+                transInBlock = signature == cycles[0][0]["user_input"][0]["signatures"][0]
+
+        elif "allocated processing time was exceeded" in trans[1]:
+            Print("Push message transaction immediately failed.")
+        else:
+            error(f"Exception in push message. {trans[1]}")
+            return False
 
         if transWillEnterBlock:
-            if not transInBlock:
+            if transInBlock:
+                Print("SUCCESS: Transaction1 entered in the chain.")
+            else:
                 error("Transaction did not enter the chain.")
                 return False
-            else:
-                Print("SUCCESS: Transaction1 entered in the chain.")
-        elif not transWillEnterBlock:
-            if transInBlock:
-                error("Transaction entered the chain.")
-                return False
-            else:
-                Print("SUCCESS: Transaction2 did not enter the chain.")
+        elif transInBlock:
+            error("Transaction entered the chain.")
+            return False
+        else:
+            Print("SUCCESS: Transaction2 did not enter the chain.")
 
         testSuccessful=True
     finally:
@@ -374,7 +361,9 @@ def myTest(transWillEnterBlock):
             Print("== Errors see above ==")
 
         if killEosInstances:
-            Print("Shut down the cluster%s" % (" and cleanup." if (testSuccessful and not keepLogs) else "."))
+            Print(
+                f'Shut down the cluster{" and cleanup." if testSuccessful and not keepLogs else "."}'
+            )
             cluster.killall()
             walletMgr.killall()
             if testSuccessful and not keepLogs:

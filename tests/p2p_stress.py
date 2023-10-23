@@ -16,7 +16,7 @@ class StressNetwork:
 
     def randAcctName(self):
         s=""
-        for i in range(12):
+        for _ in range(12):
             s=s+random.choice("abcdefghijklmnopqrstuvwxyz12345")
         return s
     
@@ -31,23 +31,23 @@ class StressNetwork:
 
         ta.name = self.randAcctName()
         acc1 = copy.copy(ta)
-        print("creating new account %s" % (ta.name))
+        print(f"creating new account {ta.name}")
         tr = node.createAccount(ta, eosio, stakedDeposit=0, waitForTransBlock=True)
         trid = node.getTransId(tr)
         if trid is None:
             return ([], "", 0.0, "failed to create account")
-        print("transaction id %s" % (trid))
+        print(f"transaction id {trid}")
 
         ta.name = self.randAcctName()
         acc2 = copy.copy(ta)
-        print("creating new account %s" % (ta.name))
+        print(f"creating new account {ta.name}")
         tr = node.createAccount(ta, eosio, stakedDeposit=0, waitForTransBlock=True)
         trid = node.getTransId(tr)
         if trid is None:
             return ([], "", 0.0, "failed to create account")
-        print("transaction id %s" % (trid))
+        print(f"transaction id {trid}")
 
-        print("issue currency into %s" % (acc1.name))
+        print(f"issue currency into {acc1.name}")
         contract="eosio"
         action="issue"
         data="{\"to\":\"" + acc1.name + "\",\"quantity\":\"1000000.0000 EOS\"}"
@@ -56,14 +56,13 @@ class StressNetwork:
         trid = node.getTransId(tr[1])
         if trid is None:
             return ([], "", 0.0, "failed to issue currency")
-        print("transaction id %s" % (trid))
+        print(f"transaction id {trid}")
         node.waitForTransIdOnNode(trid)
 
         self.trList = []
         expBal = 0
         nthreads=self.maxthreads
-        if nthreads > self.speeds[cmdInd]:
-            nthreads = self.speeds[cmdInd]
+        nthreads = min(nthreads, self.speeds[cmdInd])
         cycle = int(total / nthreads)
         total = cycle * nthreads # rounding
         delay = 1.0 / self.speeds[cmdInd] * nthreads
@@ -71,9 +70,9 @@ class StressNetwork:
         print("start currency trasfer from %s to %s for %d times with %d threads" % (acc1.name, acc2.name, total, nthreads))
 
         t00 = time.time()
+        amount = 1
         for k in range(cycle):
             t0 = time.time()
-            amount = 1
             threadList = []
             for m in range(nthreads):
                 th = threading.Thread(target = self._transfer,args = (node, acc1, acc2, amount, m, k))

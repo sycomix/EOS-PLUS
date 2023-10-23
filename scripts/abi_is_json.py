@@ -8,13 +8,12 @@ def json_validator(data):
         json.loads(data)
         return True
     except ValueError as error:
-        print("invalid json: %s" % error)
+        print(f"invalid json: {error}")
         return False
 
 def test_json_validator(abi_name):
-    abi_file = open(abi_name,'r')
-    abi_text = abi_file.read()
-    abi_file.close()
+    with open(abi_name,'r') as abi_file:
+        abi_text = abi_file.read()
     return json_validator(abi_text)
 
 if __name__ == "__main__":

@@ -66,10 +66,10 @@ class Utils:
         Utils.EosClientPath="programs/eosc/eosc"
 
         Utils.EosWalletName="eos-walletd"
-        Utils.EosWalletPath="programs/eos-walletd/"+ Utils.EosWalletName
+        Utils.EosWalletPath = f"programs/eos-walletd/{Utils.EosWalletName}"
 
         Utils.EosServerName="eosd"
-        Utils.EosServerPath="programs/eosd/"+ Utils.EosServerName
+        Utils.EosServerPath = f"programs/eosd/{Utils.EosServerName}"
 
     @staticmethod
     def setMongoSyncTime(syncTime):
@@ -81,11 +81,8 @@ class Utils:
 
     @staticmethod
     def getChainStrategies():
-        chainSyncStrategies={}
-
         chainSyncStrategy=Utils.SyncStrategy(Utils.SyncNoneTag, 0, "")
-        chainSyncStrategies[chainSyncStrategy.name]=chainSyncStrategy
-
+        chainSyncStrategies = {chainSyncStrategy.name: chainSyncStrategy}
         chainSyncStrategy=Utils.SyncStrategy(Utils.SyncReplayTag, 1, "--replay-blockchain")
         chainSyncStrategies[chainSyncStrategy.name]=chainSyncStrategy
 
@@ -97,8 +94,7 @@ class Utils:
     @staticmethod
     def checkOutput(cmd):
         assert(isinstance(cmd, list))
-        retStr=subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode("utf-8")
-        return retStr
+        return subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode("utf-8")
 
     @staticmethod
     def errorExit(msg="", raw=False, errorCode=1):
@@ -132,7 +128,7 @@ class Account(object):
 
 
     def __str__(self):
-        return "Name; %s" % (self.name)
+        return f"Name; {self.name}"
 
 ###########################################################################################
 class Node(object):
@@ -161,13 +157,13 @@ class Node(object):
     def runCmdReturnJson(cmd, trace=False):
         retStr=Utils.checkOutput(cmd.split())
         jStr=Node.filterJsonObject(retStr)
-        trace and Utils.Print ("RAW > %s"% retStr)
-        trace and Utils.Print ("JSON> %s"% jStr)
+        trace and Utils.Print(f"RAW > {retStr}")
+        trace and Utils.Print(f"JSON> {jStr}")
         try:
             jsonData=json.loads(jStr)
         except json.decoder.JSONDecodeError as ex:
-            Utils.Print ("RAW > %s"% retStr)
-            Utils.Print ("JSON> %s"% jStr)
+            Utils.Print(f"RAW > {retStr}")
+            Utils.Print(f"JSON> {jStr}")
 
         return jsonData
 
@@ -175,29 +171,25 @@ class Node(object):
     def __runCmdArrReturnJson(cmdArr, trace=False):
         retStr=Utils.checkOutput(cmdArr)
         jStr=Node.filterJsonObject(retStr)
-        trace and Utils.Print ("RAW > %s"% retStr)
-        trace and Utils.Print ("JSON> %s"% jStr)
-        jsonData=json.loads(jStr)
-        return jsonData
+        trace and Utils.Print(f"RAW > {retStr}")
+        trace and Utils.Print(f"JSON> {jStr}")
+        return json.loads(jStr)
 
     @staticmethod
     def runCmdReturnStr(cmd, trace=False):
         retStr=Node.__checkOutput(cmd.split())
-        trace and Utils.Print ("RAW > %s"% retStr)
+        trace and Utils.Print(f"RAW > {retStr}")
         return retStr
 
     @staticmethod
     def filterJsonObject(data):
         firstIdx=data.find('{')
         lastIdx=data.rfind('}')
-        retStr=data[firstIdx:lastIdx+1]
-        return retStr
+        return data[firstIdx:lastIdx+1]
 
     @staticmethod
     def __checkOutput(cmd):
-        retStr=subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode("utf-8")
-        #retStr=subprocess.check_output(cmd).decode("utf-8")
-        return retStr
+        return subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode("utf-8")
 
 
     # Passes input to stdin, executes cmd. Returns tuple with return code(int),
@@ -237,16 +229,12 @@ class Node(object):
         jStr=Node.normalizeJsonObject(extJStr)
         if not jStr:
             return None
-        trace and Utils.Print ("RAW > %s"% outStr)
-        #trace and Utils.Print ("JSON> %s"% jStr)
-        jsonData=json.loads(jStr)
-        return jsonData
+        trace and Utils.Print(f"RAW > {outStr}")
+        return json.loads(jStr)
 
     @staticmethod
     def getTransId(trans):
-        #Utils.Print("%s" % trans)
-        transId=trans["transaction_id"]
-        return transId
+        return trans["transaction_id"]
 
     @staticmethod
     def byteArrToStr(arr):
@@ -257,21 +245,20 @@ class Node(object):
 
     def getBlock(self, blockNum, retry=True, silentErrors=False):
         if not self.enableMongo:
-            cmd="%s %s get block %s" % (Utils.EosClientPath, self.endpointArgs, blockNum)
-            Utils.Debug and Utils.Print("cmd: %s" % (cmd))
+            cmd = f"{Utils.EosClientPath} {self.endpointArgs} get block {blockNum}"
+            Utils.Debug and Utils.Print(f"cmd: {cmd}")
             try:
-                trans=Node.runCmdReturnJson(cmd)
-                return trans
+                return Node.runCmdReturnJson(cmd)
             except subprocess.CalledProcessError as ex:
                 if not silentErrors:
                     msg=ex.output.decode("utf-8")
-                    Utils.Print("ERROR: Exception during get block. %s" % (msg))
+                    Utils.Print(f"ERROR: Exception during get block. {msg}")
                 return None
         else:
-            for i in range(2):
-                cmd="%s %s" % (Utils.MongoPath, self.mongoEndpointArgs)
+            for _ in range(2):
+                cmd = f"{Utils.MongoPath} {self.mongoEndpointArgs}"
                 subcommand='db.Blocks.findOne( { "block_num": %s } )' % (blockNum)
-                Utils.Debug and Utils.Print("cmd: echo '%s' | %s" % (subcommand, cmd))
+                Utils.Debug and Utils.Print(f"cmd: echo '{subcommand}' | {cmd}")
                 try:
                     trans=Node.runMongoCmdReturnJson(cmd.split(), subcommand)
                     if trans is not None:
@@ -279,7 +266,7 @@ class Node(object):
                 except subprocess.CalledProcessError as ex:
                     if not silentErrors:
                         msg=ex.output.decode("utf-8")
-                        Utils.Print("ERROR: Exception during get db node get block. %s" % (msg))
+                        Utils.Print(f"ERROR: Exception during get db node get block. {msg}")
                     return None
                 if not retry:
                     break
@@ -290,10 +277,10 @@ class Node(object):
         return None
 
     def getBlockById(self, blockId, retry=True, silentErrors=False):
-        for i in range(2):
-            cmd="%s %s" % (Utils.MongoPath, self.mongoEndpointArgs)
+        for _ in range(2):
+            cmd = f"{Utils.MongoPath} {self.mongoEndpointArgs}"
             subcommand='db.Blocks.findOne( { "block_id": "%s" } )' % (blockId)
-            Utils.Debug and Utils.Print("cmd: echo '%s' | %s" % (subcommand, cmd))
+            Utils.Debug and Utils.Print(f"cmd: echo '{subcommand}' | {cmd}")
             try:
                 trans=Node.runMongoCmdReturnJson(cmd.split(), subcommand)
                 if trans is not None:
@@ -301,7 +288,7 @@ class Node(object):
             except subprocess.CalledProcessError as ex:
                 if not silentErrors:
                     msg=ex.output.decode("utf-8")
-                    Utils.Print("ERROR: Exception during db get block by id. %s" % (msg))
+                    Utils.Print(f"ERROR: Exception during db get block by id. {msg}")
                 return None
             if not retry:
                 break
@@ -317,35 +304,30 @@ class Node(object):
 
         info=self.getInfo(silentErrors=True)
         last_irreversible_block_num=int(info["last_irreversible_block_num"])
-        if blockNum > last_irreversible_block_num:
-            return False
-        else:
-            return True
+        return blockNum <= last_irreversible_block_num
 
     def getTransaction(self, transId, retry=True, silentErrors=False):
         if not self.enableMongo:
-            cmd="%s %s get transaction %s" % (Utils.EosClientPath, self.endpointArgs, transId)
-            Utils.Debug and Utils.Print("cmd: %s" % (cmd))
+            cmd = f"{Utils.EosClientPath} {self.endpointArgs} get transaction {transId}"
+            Utils.Debug and Utils.Print(f"cmd: {cmd}")
             try:
-                trans=Node.runCmdReturnJson(cmd)
-                return trans
+                return Node.runCmdReturnJson(cmd)
             except subprocess.CalledProcessError as ex:
                 if not silentErrors:
                     msg=ex.output.decode("utf-8")
-                    Utils.Print("ERROR: Exception during account by transaction retrieval. %s" % (msg))
+                    Utils.Print(f"ERROR: Exception during account by transaction retrieval. {msg}")
                 return None
         else:
-            for i in range(2):
-                cmd="%s %s" % (Utils.MongoPath, self.mongoEndpointArgs)
+            for _ in range(2):
+                cmd = f"{Utils.MongoPath} {self.mongoEndpointArgs}"
                 subcommand='db.Transactions.findOne( { $and : [ { "transaction_id": "%s" }, {"pending":false} ] } )' % (transId)
-                Utils.Debug and Utils.Print("cmd: echo '%s' | %s" % (subcommand, cmd))
+                Utils.Debug and Utils.Print(f"cmd: echo '{subcommand}' | {cmd}")
                 try:
-                    trans=Node.runMongoCmdReturnJson(cmd.split(), subcommand)
-                    return trans
+                    return Node.runMongoCmdReturnJson(cmd.split(), subcommand)
                 except subprocess.CalledProcessError as ex:
                     if not silentErrors:
                         msg=ex.output.decode("utf-8")
-                        Utils.Print("ERROR: Exception during get db node get trans. %s" % (msg))
+                        Utils.Print(f"ERROR: Exception during get db node get trans. {msg}")
                     return None
                 if not retry:
                     break
@@ -356,10 +338,10 @@ class Node(object):
         return None
 
     def getTransByBlockId(self, blockId, retry=True, silentErrors=False):
-        for i in range(2):
-            cmd="%s %s" % (Utils.MongoPath, self.mongoEndpointArgs)
+        for _ in range(2):
+            cmd = f"{Utils.MongoPath} {self.mongoEndpointArgs}"
             subcommand='db.Transactions.find( { "block_id": "%s" } )' % (blockId)
-            Utils.Debug and Utils.Print("cmd: echo '%s' | %s" % (subcommand, cmd))
+            Utils.Debug and Utils.Print(f"cmd: echo '{subcommand}' | {cmd}")
             try:
                 trans=Node.runMongoCmdReturnJson(cmd.split(), subcommand, True)
                 if trans is not None:
@@ -367,7 +349,7 @@ class Node(object):
             except subprocess.CalledProcessError as ex:
                 if not silentErrors:
                     msg=ex.output.decode("utf-8")
-                    Utils.Print("ERROR: Exception during db get trans by blockId. %s" % (msg))
+                    Utils.Print(f"ERROR: Exception during db get trans by blockId. {msg}")
                 return None
             if not retry:
                 break
@@ -380,10 +362,10 @@ class Node(object):
 
 
     def getActionFromDb(self, transId, retry=True, silentErrors=False):
-        for i in range(2):
-            cmd="%s %s" % (Utils.MongoPath, self.mongoEndpointArgs)
+        for _ in range(2):
+            cmd = f"{Utils.MongoPath} {self.mongoEndpointArgs}"
             subcommand='db.Actions.findOne( { "transaction_id": "%s" } )' % (transId)
-            Utils.Debug and Utils.Print("cmd: echo '%s' | %s" % (subcommand, cmd))
+            Utils.Debug and Utils.Print(f"cmd: echo '{subcommand}' | {cmd}")
             try:
                 trans=Node.runMongoCmdReturnJson(cmd.split(), subcommand)
                 if trans is not None:
@@ -391,7 +373,7 @@ class Node(object):
             except subprocess.CalledProcessError as ex:
                 if not silentErrors:
                     msg=ex.output.decode("utf-8")
-                    Utils.Print("ERROR: Exception during get db node get message. %s" % (msg))
+                    Utils.Print(f"ERROR: Exception during get db node get message. {msg}")
                 return None
             if not retry:
                 break
@@ -402,10 +384,10 @@ class Node(object):
         return None
 
     def getMessageFromDb(self, transId, retry=True, silentErrors=False):
-        for i in range(2):
-            cmd="%s %s" % (Utils.MongoPath, self.mongoEndpointArgs)
+        for _ in range(2):
+            cmd = f"{Utils.MongoPath} {self.mongoEndpointArgs}"
             subcommand='db.Messages.findOne( { "transaction_id": "%s" } )' % (transId)
-            Utils.Debug and Utils.Print("cmd: echo '%s' | %s" % (subcommand, cmd))
+            Utils.Debug and Utils.Print(f"cmd: echo '{subcommand}' | {cmd}")
             try:
                 trans=Node.runMongoCmdReturnJson(cmd.split(), subcommand)
                 if trans is not None:
@@ -413,7 +395,7 @@ class Node(object):
             except subprocess.CalledProcessError as ex:
                 if not silentErrors:
                     msg=ex.output.decode("utf-8")
-                    Utils.Print("ERROR: Exception during get db node get message. %s" % (msg))
+                    Utils.Print(f"ERROR: Exception during get db node get message. {msg}")
                 return None
             if not retry:
                 break
@@ -429,12 +411,11 @@ class Node(object):
             return False
 
         blockNum=None
-        if not self.enableMongo:
-            blockNum=int(trans["transaction"]["data"]["ref_block_num"])
-        else:
-            blockNum=int(trans["ref_block_num"])
-
-        blockNum += 1
+        blockNum = (
+            int(trans["transaction"]["data"]["ref_block_num"])
+            if not self.enableMongo
+            else int(trans["ref_block_num"])
+        ) + 1
         return self.doesNodeHaveBlockNum(blockNum)
 
     def createInitAccounts(self, producers):
@@ -476,11 +457,11 @@ class Node(object):
             initx.activePublicKey=keys[0]
             trans=self.createAccount(initx, eosio, 0)
             if trans is None:
-                Utils.errorExit("Failed to create account %s" % (name))
+                Utils.errorExit(f"Failed to create account {name}")
 
             trans = self.transferFunds(eosio, initx, 10000000000, "init transfer")
             if trans is None:
-                Utils.errorExit("Failed to transfer funds from %s to %s." % (eosio.name, name))
+                Utils.errorExit(f"Failed to transfer funds from {eosio.name} to {name}.")
 
         transId=Node.getTransId(trans)
         self.waitForTransIdOnNode(transId)
@@ -491,23 +472,15 @@ class Node(object):
     # waitForTransBlock: wait on creation transaction id to appear in a block
     def createAccount(self, account, creatorAccount, stakedDeposit=1000, waitForTransBlock=False):
         cmd=None
-        if Utils.amINoon:
-            cmd="%s %s create account %s %s %s %s" % (
-                Utils.EosClientPath, self.endpointArgs, creatorAccount.name, account.name,
-                account.ownerPublicKey, account.activePublicKey)
-        else:
-            cmd="%s %s create account %s %s %s %s" % (Utils.EosClientPath, self.endpointArgs,
-                                                      creatorAccount.name, account.name,
-                                                      account.ownerPublicKey, account.activePublicKey)
-
-        Utils.Debug and Utils.Print("cmd: %s" % (cmd))
+        cmd = f"{Utils.EosClientPath} {self.endpointArgs} create account {creatorAccount.name} {account.name} {account.ownerPublicKey} {account.activePublicKey}"
+        Utils.Debug and Utils.Print(f"cmd: {cmd}")
         trans=None
         try:
             trans=Node.runCmdReturnJson(cmd)
             transId=Node.getTransId(trans)
         except subprocess.CalledProcessError as ex:
             msg=ex.output.decode("utf-8")
-            Utils.Print("ERROR: Exception during account creation. %s" % (msg))
+            Utils.Print(f"ERROR: Exception during account creation. {msg}")
             return None
 
         if waitForTransBlock and not self.waitForTransIdOnNode(transId):
@@ -521,60 +494,55 @@ class Node(object):
         return trans
 
     def getEosAccount(self, name):
-        cmd="%s %s get account %s" % (Utils.EosClientPath, self.endpointArgs, name)
-        Utils.Debug and Utils.Print("cmd: %s" % (cmd))
+        cmd = f"{Utils.EosClientPath} {self.endpointArgs} get account {name}"
+        Utils.Debug and Utils.Print(f"cmd: {cmd}")
         try:
-            trans=Node.runCmdReturnJson(cmd)
-            return trans
+            return Node.runCmdReturnJson(cmd)
         except subprocess.CalledProcessError as ex:
             msg=ex.output.decode("utf-8")
-            Utils.Print("ERROR: Exception during get account. %s" % (msg))
+            Utils.Print(f"ERROR: Exception during get account. {msg}")
             return None
 
     def getEosAccountFromDb(self, name):
-        cmd="%s %s" % (Utils.MongoPath, self.mongoEndpointArgs)
+        cmd = f"{Utils.MongoPath} {self.mongoEndpointArgs}"
         subcommand='db.Accounts.findOne({"name" : "%s"})' % (name)
-        Utils.Debug and Utils.Print("cmd: echo '%s' | %s" % (subcommand, cmd))
+        Utils.Debug and Utils.Print(f"cmd: echo '{subcommand}' | {cmd}")
         try:
-            trans=Node.runMongoCmdReturnJson(cmd.split(), subcommand)
-            return trans
+            return Node.runMongoCmdReturnJson(cmd.split(), subcommand)
         except subprocess.CalledProcessError as ex:
             msg=ex.output.decode("utf-8")
-            Utils.Print("ERROR: Exception during get account from db. %s" % (msg))
+            Utils.Print(f"ERROR: Exception during get account from db. {msg}")
             return None
 
 
     def getEosCurrencyBalance(self, name):
-        cmd="%s %s get currency balance eosio %s EOS" % (Utils.EosClientPath, self.endpointArgs, name)
-        Utils.Debug and Utils.Print("cmd: %s" % (cmd))
+        cmd = f"{Utils.EosClientPath} {self.endpointArgs} get currency balance eosio {name} EOS"
+        Utils.Debug and Utils.Print(f"cmd: {cmd}")
         try:
-            trans=Node.runCmdReturnStr(cmd)
-            return trans
+            return Node.runCmdReturnStr(cmd)
         except subprocess.CalledProcessError as ex:
             msg=ex.output.decode("utf-8")
-            Utils.Print("ERROR: Exception during get EOS balance. %s" % (msg))
+            Utils.Print(f"ERROR: Exception during get EOS balance. {msg}")
             return None
 
     def getCurrencyBalance(self, contract, account, symbol):
-        cmd="%s %s get currency balance %s %s %s" % (Utils.EosClientPath, self.endpointArgs, contract, account, symbol)
-        Utils.Debug and Utils.Print("cmd: %s" % (cmd))
+        cmd = f"{Utils.EosClientPath} {self.endpointArgs} get currency balance {contract} {account} {symbol}"
+        Utils.Debug and Utils.Print(f"cmd: {cmd}")
         try:
-            trans=Node.runCmdReturnStr(cmd)
-            return trans
+            return Node.runCmdReturnStr(cmd)
         except subprocess.CalledProcessError as ex:
             msg=ex.output.decode("utf-8")
-            Utils.Print("ERROR: Exception during get currency balance. %s" % (msg))
+            Utils.Print(f"ERROR: Exception during get currency balance. {msg}")
             return None
 
     def getCurrencyStats(self, contract, symbol=""):
-        cmd="%s %s get currency stats %s %s" % (Utils.EosClientPath, self.endpointArgs, contract, symbol)
-        Utils.Debug and Utils.Print("cmd: %s" % (cmd))
+        cmd = f"{Utils.EosClientPath} {self.endpointArgs} get currency stats {contract} {symbol}"
+        Utils.Debug and Utils.Print(f"cmd: {cmd}")
         try:
-            trans=Node.runCmdReturnJson(cmd)
-            return trans
+            return Node.runCmdReturnJson(cmd)
         except subprocess.CalledProcessError as ex:
             msg=ex.output.decode("utf-8")
-            Utils.Print("ERROR: Exception during get currency stats. %s" % (msg))
+            Utils.Print(f"ERROR: Exception during get currency stats. {msg}")
             return None
 
     # Verifies account. Returns "get account" json return object
@@ -588,7 +556,7 @@ class Node(object):
                     return None
                 return ret
         else:
-            for i in range(2):
+            for _ in range(2):
                 ret=self.getEosAccountFromDb(account.name)
                 if ret is not None:
                     account_name=ret["name"]
@@ -641,12 +609,12 @@ class Node(object):
         remainingTime=timeout
         Utils.Debug and Utils.Print("cmd: remaining time %d seconds" % (remainingTime))
         num=self.getIrreversibleBlockNum()
-        Utils.Debug and Utils.Print("Current block number: %s" % (num))
+        Utils.Debug and Utils.Print(f"Current block number: {num}")
 
         while time.time()-startTime < timeout:
             nextNum=self.getIrreversibleBlockNum()
             if nextNum > num:
-                Utils.Debug and Utils.Print("Next block number: %s" % (nextNum))
+                Utils.Debug and Utils.Print(f"Next block number: {nextNum}")
                 return True
 
             sleepTime=.5 if remainingTime > .5 else (.5 - remainingTime)
@@ -665,14 +633,13 @@ class Node(object):
         if force:
             cmdArr.append("-f")
         s=" ".join(cmdArr)
-        Utils.Debug and Utils.Print("cmd: %s" % (s))
+        Utils.Debug and Utils.Print(f"cmd: {s}")
         trans=None
         try:
-            trans=Node.__runCmdArrReturnJson(cmdArr)
-            return trans
+            return Node.__runCmdArrReturnJson(cmdArr)
         except subprocess.CalledProcessError as ex:
             msg=ex.output.decode("utf-8")
-            Utils.Print("ERROR: Exception during funds transfer. %s" % (msg))
+            Utils.Print(f"ERROR: Exception during funds transfer. {msg}")
             return None
 
     def validateSpreadFundsOnNode(self, adminAccount, accounts, expectedTotal):
@@ -700,45 +667,40 @@ class Node(object):
 
     # Gets accounts mapped to key. Returns json object
     def getAccountsByKey(self, key):
-        cmd="%s %s get accounts %s" % (Utils.EosClientPath, self.endpointArgs, key)
-        Utils.Debug and Utils.Print("cmd: %s" % (cmd))
+        cmd = f"{Utils.EosClientPath} {self.endpointArgs} get accounts {key}"
+        Utils.Debug and Utils.Print(f"cmd: {cmd}")
         try:
-            trans=Node.runCmdReturnJson(cmd)
-            return trans
+            return Node.runCmdReturnJson(cmd)
         except subprocess.CalledProcessError as ex:
             msg=ex.output.decode("utf-8")
-            Utils.Print("ERROR: Exception during accounts by key retrieval. %s" % (msg))
+            Utils.Print(f"ERROR: Exception during accounts by key retrieval. {msg}")
             return None
 
     # Gets accounts mapped to key. Returns array
     def getAccountsArrByKey(self, key):
         trans=self.getAccountsByKey(key)
-        accounts=trans["account_names"]
-        return accounts
+        return trans["account_names"]
 
     def getServants(self, name):
-        cmd="%s %s get servants %s" % (Utils.EosClientPath, self.endpointArgs, name)
-        Utils.Debug and Utils.Print("cmd: %s" % (cmd))
+        cmd = f"{Utils.EosClientPath} {self.endpointArgs} get servants {name}"
+        Utils.Debug and Utils.Print(f"cmd: {cmd}")
         try:
-            trans=Node.runCmdReturnJson(cmd)
-            return trans
+            return Node.runCmdReturnJson(cmd)
         except subprocess.CalledProcessError as ex:
             msg=ex.output.decode("utf-8")
-            Utils.Print("ERROR: Exception during servants retrieval. %s" % (msg))
+            Utils.Print(f"ERROR: Exception during servants retrieval. {msg}")
             return None
 
     def getServantsArr(self, name):
         trans=self.getServants(name)
-        servants=trans["controlled_accounts"]
-        return servants
+        return trans["controlled_accounts"]
 
     def getAccountBalance(self, name):
         if not self.enableMongo:
             amount=self.getEosCurrencyBalance(name)
             Utils.Debug and Utils.Print("getEosCurrencyBalance", name, amount)
             balanceStr=amount.split()[0]
-            balance=int(decimal.Decimal(balanceStr[1:])*10000)
-            return balance
+            return int(decimal.Decimal(balanceStr[1:])*10000)
         else:
             if self.mongoSyncTime is not None:
                 Utils.Debug and Utils.Print("cmd: sleep %d seconds" % (self.mongoSyncTime))
@@ -748,36 +710,31 @@ class Node(object):
             if account is not None:
                 field=account["eos_balance"]
                 balanceStr=field.split()[0]
-                balance=int(float(balanceStr)*10000)
-                return balance
-
+                return int(float(balanceStr)*10000)
         return None
 
     # transactions lookup by id. Returns json object
     def getTransactionsByAccount(self, name):
-        cmd="%s %s get transactions %s" % (Utils.EosClientPath, self.endpointArgs, name)
-        Utils.Debug and Utils.Print("cmd: %s" % (cmd))
+        cmd = f"{Utils.EosClientPath} {self.endpointArgs} get transactions {name}"
+        Utils.Debug and Utils.Print(f"cmd: {cmd}")
         try:
-            trans=Node.runCmdReturnJson(cmd)
-            return trans
+            return Node.runCmdReturnJson(cmd)
         except subprocess.CalledProcessError as ex:
             msg=ex.output.decode("utf-8")
-            Utils.Print("ERROR: Exception during transactions by account retrieval. %s" % (msg))
+            Utils.Print(
+                f"ERROR: Exception during transactions by account retrieval. {msg}"
+            )
             return None
 
     # transactions lookup by id. Returns list of transaction ids
     def getTransactionsArrByAccount(self, name):
         trans=self.getTransactionsByAccount(name)
         transactions=trans["transactions"]
-        transArr=[]
-        for transaction in transactions:
-            id=transaction["transaction_id"]
-            transArr.append(id)
-        return transArr
+        return [transaction["transaction_id"] for transaction in transactions]
 
     def getAccountCodeHash(self, account):
-        cmd="%s %s get code %s" % (Utils.EosClientPath, self.endpointArgs, account)
-        Utils.Debug and Utils.Print("cmd: %s" % (cmd))
+        cmd = f"{Utils.EosClientPath} {self.endpointArgs} get code {account}"
+        Utils.Debug and Utils.Print(f"cmd: {cmd}")
         try:
             retStr=Utils.checkOutput(cmd.split())
             #Utils.Print ("get code> %s"% retStr)
@@ -785,39 +742,28 @@ class Node(object):
             m=p.search(retStr)
             if m is None:
                 msg="Failed to parse code hash."
-                Utils.Print("ERROR: "+ msg)
+                Utils.Print(f"ERROR: {msg}")
                 return None
 
             return m.group(1)
-            trans=Node.runCmdReturnJson(cmd, True)
-            return trans
         except subprocess.CalledProcessError as ex:
             msg=ex.output.decode("utf-8")
-            Utils.Print("ERROR: Exception during code hash retrieval. %s" % (msg))
+            Utils.Print(f"ERROR: Exception during code hash retrieval. {msg}")
             return None
 
     # publish contract and return transaction as json object
     def publishContract(self, account, wastFile, abiFile, waitForTransBlock=False, shouldFail=False):
-        cmd="%s %s -v set contract %s %s %s" % (Utils.EosClientPath, self.endpointArgs, account, wastFile, abiFile)
-        Utils.Debug and Utils.Print("cmd: %s" % (cmd))
+        cmd = f"{Utils.EosClientPath} {self.endpointArgs} -v set contract {account} {wastFile} {abiFile}"
+        Utils.Debug and Utils.Print(f"cmd: {cmd}")
         trans=None
         try:
             trans=Node.runCmdReturnJson(cmd)
         except subprocess.CalledProcessError as ex:
-            if not shouldFail:
-                msg=ex.output.decode("utf-8")
-                Utils.Print("ERROR: Exception during code hash retrieval. %s" % (msg))
-                return None
-            else:
-                retMap={}
-                retMap["returncode"]=ex.returncode
-                retMap["cmd"]=ex.cmd
-                retMap["output"]=ex.output
-                # commented below as they are available only in Python3.5 and above
-                # retMap["stdout"]=ex.stdout
-                # retMap["stderr"]=ex.stderr
-                return retMap
-
+            if shouldFail:
+                return {"returncode": ex.returncode, "cmd": ex.cmd, "output": ex.output}
+            msg=ex.output.decode("utf-8")
+            Utils.Print(f"ERROR: Exception during code hash retrieval. {msg}")
+            return None
         if shouldFail:
             Utils.Print("ERROR: The publish contract did not fail as expected.")
             return None
@@ -829,14 +775,14 @@ class Node(object):
 
     # create producer and return transaction as json object
     def createProducer(self, account, ownerPublicKey, waitForTransBlock=False):
-        cmd="%s %s create producer %s %s" % (Utils.EosClientPath, self.endpointArgs, account, ownerPublicKey)
-        Utils.Debug and Utils.Print("cmd: %s" % (cmd))
+        cmd = f"{Utils.EosClientPath} {self.endpointArgs} create producer {account} {ownerPublicKey}"
+        Utils.Debug and Utils.Print(f"cmd: {cmd}")
         trans=None
         try:
             trans=Node.runCmdReturnJson(cmd)
         except subprocess.CalledProcessError as ex:
             msg=ex.output.decode("utf-8")
-            Utils.Print("ERROR: Exception during producer creation. %s" % (msg))
+            Utils.Print(f"ERROR: Exception during producer creation. {msg}")
             return None
 
         transId=Node.getTransId(trans)
@@ -845,22 +791,18 @@ class Node(object):
         return trans
 
     def getTable(self, account, contract, table):
-        cmd="%s %s get table %s %s %s" % (Utils.EosClientPath, self.endpointArgs, account, contract, table)
-        Utils.Debug and Utils.Print("cmd: %s" % (cmd))
+        cmd = f"{Utils.EosClientPath} {self.endpointArgs} get table {account} {contract} {table}"
+        Utils.Debug and Utils.Print(f"cmd: {cmd}")
         try:
-            trans=Node.runCmdReturnJson(cmd)
-            return trans
+            return Node.runCmdReturnJson(cmd)
         except subprocess.CalledProcessError as ex:
             msg=ex.output.decode("utf-8")
-            Utils.Print("ERROR: Exception during table retrieval. %s" % (msg))
+            Utils.Print(f"ERROR: Exception during table retrieval. {msg}")
             return None
 
     def getTableRows(self, account, contract, table):
         jsonData=self.getTable(account, contract, table)
-        if jsonData is None:
-            return None
-        rows=jsonData["rows"]
-        return rows
+        return None if jsonData is None else jsonData["rows"]
 
     def getTableRow(self, account, contract, table, idx):
         if idx < 0:
@@ -870,8 +812,7 @@ class Node(object):
         if rows is None or idx >= len(rows):
             Utils.Print("ERROR: Retrieved table does not contain row %d" % idx)
             return None
-        row=rows[idx]
-        return row
+        return rows[idx]
 
     def getTableColumns(self, account, contract, table):
         row=self.getTableRow(account, contract, table, 0)
@@ -882,35 +823,34 @@ class Node(object):
     def pushMessage(self, contract, action, data, opts, silentErrors=False):
         cmd=None
         if Utils.amINoon:
-            cmd="%s %s push action %s %s" % (Utils.EosClientPath, self.endpointArgs, contract, action)
+            cmd = f"{Utils.EosClientPath} {self.endpointArgs} push action {contract} {action}"
         else:
-            cmd="%s %s push message %s %s" % (Utils.EosClientPath, self.endpointArgs, contract, action)
+            cmd = f"{Utils.EosClientPath} {self.endpointArgs} push message {contract} {action}"
         cmdArr=cmd.split()
         if data is not None:
             cmdArr.append(data)
         if opts is not None:
             cmdArr += opts.split()
         s=" ".join(cmdArr)
-        Utils.Debug and Utils.Print("cmd: %s" % (s))
+        Utils.Debug and Utils.Print(f"cmd: {s}")
         try:
             trans=Node.__runCmdArrReturnJson(cmdArr)
             return (True, trans)
         except subprocess.CalledProcessError as ex:
             msg=ex.output.decode("utf-8")
             if not silentErrors:
-                Utils.Print("ERROR: Exception during push message. %s" % (msg))
+                Utils.Print(f"ERROR: Exception during push message. {msg}")
             return (False, msg)
 
     def setPermission(self, account, code, pType, requirement, waitForTransBlock=False):
-        cmd="%s %s set action permission %s %s %s %s" % (
-            Utils.EosClientPath, self.endpointArgs, account, code, pType, requirement)
-        Utils.Debug and Utils.Print("cmd: %s" % (cmd))
+        cmd = f"{Utils.EosClientPath} {self.endpointArgs} set action permission {account} {code} {pType} {requirement}"
+        Utils.Debug and Utils.Print(f"cmd: {cmd}")
         trans=None
         try:
             trans=Node.runCmdReturnJson(cmd)
         except subprocess.CalledProcessError as ex:
             msg=ex.output.decode("utf-8")
-            Utils.Print("ERROR: Exception during set permission. %s" % (msg))
+            Utils.Print(f"ERROR: Exception during set permission. {msg}")
             return None
 
         transId=Node.getTransId(trans)
@@ -919,27 +859,25 @@ class Node(object):
         return trans
 
     def getInfo(self, silentErrors=False):
-        cmd="%s %s get info" % (Utils.EosClientPath, self.endpointArgs)
-        Utils.Debug and Utils.Print("cmd: %s" % (cmd))
+        cmd = f"{Utils.EosClientPath} {self.endpointArgs} get info"
+        Utils.Debug and Utils.Print(f"cmd: {cmd}")
         try:
-            trans=Node.runCmdReturnJson(cmd)
-            return trans
+            return Node.runCmdReturnJson(cmd)
         except subprocess.CalledProcessError as ex:
             if not silentErrors:
                 msg=ex.output.decode("utf-8")
-                Utils.Print("ERROR: Exception during get info. %s" % (msg))
+                Utils.Print(f"ERROR: Exception during get info. {msg}")
             return None
 
     def getBlockFromDb(self, idx):
-        cmd="%s %s" % (Utils.MongoPath, self.mongoEndpointArgs)
+        cmd = f"{Utils.MongoPath} {self.mongoEndpointArgs}"
         subcommand="db.Blocks.find().sort({\"_id\":%d}).limit(1).pretty()" % (idx)
         Utils.Debug and Utils.Print("cmd: echo \"%s\" | %s" % (subcommand, cmd))
         try:
-            trans=Node.runMongoCmdReturnJson(cmd.split(), subcommand)
-            return trans
+            return Node.runMongoCmdReturnJson(cmd.split(), subcommand)
         except subprocess.CalledProcessError as ex:
             msg=ex.output.decode("utf-8")
-            Utils.Print("ERROR: Exception during get db block. %s" % (msg))
+            Utils.Print(f"ERROR: Exception during get db block. {msg}")
             return None
 
     def checkPulse(self):
@@ -960,8 +898,7 @@ class Node(object):
         else:
             block=self.getBlockFromDb(-1)
             if block is not None:
-                blockNum=block["block_num"]
-                return blockNum
+                return block["block_num"]
         return None
 
     def getIrreversibleBlockNum(self):
@@ -972,8 +909,7 @@ class Node(object):
         else:
             block=self.getBlockFromDb(-1)
             if block is not None:
-                blockNum=block["block_num"]
-                return blockNum
+                return block["block_num"]
         return None
 
 ###########################################################################################
@@ -1003,7 +939,7 @@ class WalletMgr(object):
 
         cmd="%s --data-dir %s --config-dir %s --http-server-address=%s:%d" % (
             Utils.EosWalletPath, WalletMgr.__walletDataDir, WalletMgr.__walletDataDir, self.host, self.port)
-        Utils.Print("cmd: %s" % (cmd))
+        Utils.Print(f"cmd: {cmd}")
         with open(WalletMgr.__walletLogFile, 'w') as sout, open(WalletMgr.__walletLogFile, 'w') as serr:
             popen=subprocess.Popen(cmd.split(), stdout=sout, stderr=serr)
             self.__walletPid=popen.pid
@@ -1018,8 +954,8 @@ class WalletMgr(object):
             Utils.Debug and Utils.Print("Wallet \"%s\" already exists. Returning same." % name)
             return wallet
         p = re.compile('\n\"(\w+)\"\n', re.MULTILINE)
-        cmd="%s %s wallet create --name %s" % (Utils.EosClientPath, self.endpointArgs, name)
-        Utils.Debug and Utils.Print("cmd: %s" % (cmd))
+        cmd = f"{Utils.EosClientPath} {self.endpointArgs} wallet create --name {name}"
+        Utils.Debug and Utils.Print(f"cmd: {cmd}")
         retStr=subprocess.check_output(cmd.split()).decode("utf-8")
         #Utils.Print("create: %s" % (retStr))
         m=p.search(retStr)
@@ -1034,9 +970,8 @@ class WalletMgr(object):
 
     def importKey(self, account, wallet):
         warningMsg="This key is already imported into the wallet"
-        cmd="%s %s wallet import --name %s %s" % (
-            Utils.EosClientPath, self.endpointArgs, wallet.name, account.ownerPrivateKey)
-        Utils.Debug and Utils.Print("cmd: %s" % (cmd))
+        cmd = f"{Utils.EosClientPath} {self.endpointArgs} wallet import --name {wallet.name} {account.ownerPrivateKey}"
+        Utils.Debug and Utils.Print(f"cmd: {cmd}")
         try:
             retStr=subprocess.check_output(cmd.split(), stderr=subprocess.STDOUT).decode("utf-8")
         except subprocess.CalledProcessError as ex:
@@ -1044,15 +979,16 @@ class WalletMgr(object):
             if warningMsg in msg:
                 Utils.Print("WARNING: This key is already imported into the wallet.")
             else:
-                Utils.Print("ERROR: Failed to import account owner key %s. %s" % (account.ownerPrivateKey, msg))
+                Utils.Print(
+                    f"ERROR: Failed to import account owner key {account.ownerPrivateKey}. {msg}"
+                )
                 return False
 
         if account.activePrivateKey is None:
             Utils.Print("WARNING: Active private key is not defined for account \"%s\"" % (account.name))
         else:
-            cmd="%s %s wallet import --name %s %s" % (
-                Utils.EosClientPath, self.endpointArgs, wallet.name, account.activePrivateKey)
-            Utils.Debug and Utils.Print("cmd: %s" % (cmd))
+            cmd = f"{Utils.EosClientPath} {self.endpointArgs} wallet import --name {wallet.name} {account.activePrivateKey}"
+            Utils.Debug and Utils.Print(f"cmd: {cmd}")
             try:
                 retStr=subprocess.check_output(cmd.split(), stderr=subprocess.STDOUT).decode("utf-8")
             except subprocess.CalledProcessError as ex:
@@ -1060,36 +996,39 @@ class WalletMgr(object):
                 if warningMsg in msg:
                     Utils.Print("WARNING: This key is already imported into the wallet.")
                 else:
-                    Utils.Print("ERROR: Failed to import account active key %s. %s" %
-                                (account.activePrivateKey, msg))
+                    Utils.Print(
+                        f"ERROR: Failed to import account active key {account.activePrivateKey}. {msg}"
+                    )
                     return False
 
         return True
 
     def lockWallet(self, wallet):
-        cmd="%s %s wallet lock --name %s" % (Utils.EosClientPath, self.endpointArgs, wallet.name)
-        Utils.Debug and Utils.Print("cmd: %s" % (cmd))
-        if 0 != subprocess.call(cmd.split(), stdout=Utils.FNull):
-            Utils.Print("ERROR: Failed to lock wallet %s." % (wallet.name))
+        cmd = f"{Utils.EosClientPath} {self.endpointArgs} wallet lock --name {wallet.name}"
+        Utils.Debug and Utils.Print(f"cmd: {cmd}")
+        if subprocess.call(cmd.split(), stdout=Utils.FNull) != 0:
+            Utils.Print(f"ERROR: Failed to lock wallet {wallet.name}.")
             return False
 
         return True
 
     def unlockWallet(self, wallet):
-        cmd="%s %s wallet unlock --name %s" % (Utils.EosClientPath, self.endpointArgs, wallet.name)
-        Utils.Debug and Utils.Print("cmd: %s" % (cmd))
+        cmd = f"{Utils.EosClientPath} {self.endpointArgs} wallet unlock --name {wallet.name}"
+        Utils.Debug and Utils.Print(f"cmd: {cmd}")
         popen=subprocess.Popen(cmd.split(), stdout=Utils.FNull, stdin=subprocess.PIPE)
         outs, errs = popen.communicate(input=wallet.password.encode("utf-8"))
-        if 0 != popen.wait():
-            Utils.Print("ERROR: Failed to unlock wallet %s: %s" % (wallet.name, errs.decode("utf-8")))
+        if popen.wait() != 0:
+            Utils.Print(
+                f'ERROR: Failed to unlock wallet {wallet.name}: {errs.decode("utf-8")}'
+            )
             return False
 
         return True
 
     def lockAllWallets(self):
-        cmd="%s %s wallet lock_all" % (Utils.EosClientPath, self.endpointArgs)
-        Utils.Debug and Utils.Print("cmd: %s" % (cmd))
-        if 0 != subprocess.call(cmd.split(), stdout=Utils.FNull):
+        cmd = f"{Utils.EosClientPath} {self.endpointArgs} wallet lock_all"
+        Utils.Debug and Utils.Print(f"cmd: {cmd}")
+        if subprocess.call(cmd.split(), stdout=Utils.FNull) != 0:
             Utils.Print("ERROR: Failed to lock all wallets.")
             return False
 
@@ -1099,46 +1038,42 @@ class WalletMgr(object):
         wallets=[]
 
         p = re.compile('\s+\"(\w+)\s\*\",?\n', re.MULTILINE)
-        cmd="%s %s wallet list" % (Utils.EosClientPath, self.endpointArgs)
-        Utils.Debug and Utils.Print("cmd: %s" % (cmd))
+        cmd = f"{Utils.EosClientPath} {self.endpointArgs} wallet list"
+        Utils.Debug and Utils.Print(f"cmd: {cmd}")
         retStr=subprocess.check_output(cmd.split()).decode("utf-8")
         #Utils.Print("retStr: %s" % (retStr))
         m=p.findall(retStr)
         if m is None:
             Utils.Print("ERROR: wallet list parser failure")
             return None
-        wallets=m
-
-        return wallets
+        return m
 
     def getKeys(self):
         keys=[]
 
         p = re.compile('\n\s+\"(\w+)\"\n', re.MULTILINE)
-        cmd="%s %s wallet keys" % (Utils.EosClientPath, self.endpointArgs)
-        Utils.Debug and Utils.Print("cmd: %s" % (cmd))
+        cmd = f"{Utils.EosClientPath} {self.endpointArgs} wallet keys"
+        Utils.Debug and Utils.Print(f"cmd: {cmd}")
         retStr=subprocess.check_output(cmd.split()).decode("utf-8")
         #Utils.Print("retStr: %s" % (retStr))
         m=p.findall(retStr)
         if m is None:
             Utils.Print("ERROR: wallet keys parser failure")
             return None
-        keys=m
-
-        return keys
+        return m
 
 
     def dumpErrorDetails(self):
         Utils.Print("=================================================================")
         if self.__walletPid is not None:
-            Utils.Print("Contents of %s:" % (WalletMgr.__walletLogFile))
+            Utils.Print(f"Contents of {WalletMgr.__walletLogFile}:")
             Utils.Print("=================================================================")
             with open(WalletMgr.__walletLogFile, "r") as f:
                 shutil.copyfileobj(f, sys.stdout)
 
     def killall(self):
-        cmd="pkill %s" % (Utils.EosWalletName)
-        Utils.Debug and Utils.Print("cmd: %s" % (cmd))
+        cmd = f"pkill {Utils.EosWalletName}"
+        Utils.Debug and Utils.Print(f"cmd: {cmd}")
         subprocess.call(cmd.split())
 
     def cleanup(self):
@@ -1201,14 +1136,15 @@ class Cluster(object):
     # launch local nodes and set self.nodes
     def launch(self, pnodes=1, total_nodes=1, topo="mesh", delay=0):
         if not self.localCluster:
-            Utils.Print("WARNING: Cluster not local, not launching %s." % (Utils.EosServerName))
+            Utils.Print(
+                f"WARNING: Cluster not local, not launching {Utils.EosServerName}."
+            )
             return True
 
         if len(self.nodes) > 0:
             raise RuntimeError("Cluster already running.")
 
-        cmd="%s -p %s -n %s -s %s -d %s -f" % (
-            Utils.EosLauncherPath, pnodes, total_nodes, topo, delay)
+        cmd = f"{Utils.EosLauncherPath} -p {pnodes} -n {total_nodes} -s {topo} -d {delay} -f"
         cmdArr=cmd.split()
         if self.staging:
             cmdArr.append("--nogen")
@@ -1217,16 +1153,18 @@ class Cluster(object):
                 cmdArr.append("--nodeos")
             else:
                 cmdArr.append("--eosd")
-            if not self.walletd:
-                cmdArr.append("--plugin eosio::wallet_api_plugin")
-            if self.enableMongo:
-                if Utils.amINoon:
-                    cmdArr.append("--plugin eosio::mongo_db_plugin --resync --mongodb-uri %s" % self.mongoUri)
-                else:
-                    cmdArr.append("--plugin eosio::db_plugin --mongodb-uri %s" % self.mongoUri)
+        if not self.walletd:
+            cmdArr.append("--plugin eosio::wallet_api_plugin")
+        if self.enableMongo:
+            if Utils.amINoon:
+                cmdArr.append(
+                    f"--plugin eosio::mongo_db_plugin --resync --mongodb-uri {self.mongoUri}"
+                )
+            else:
+                cmdArr.append(f"--plugin eosio::db_plugin --mongodb-uri {self.mongoUri}")
         s=" ".join(cmdArr)
-        Utils.Print("cmd: %s" % (s))
-        if 0 != subprocess.call(cmdArr):
+        Utils.Print(f"cmd: {s}")
+        if subprocess.call(cmdArr) != 0:
             Utils.Print("ERROR: Launcher failed to launch.")
             return False
 
@@ -1306,8 +1244,9 @@ class Cluster(object):
 
         if self.__lastTrans is not None:
             if self.nodes[0].waitForTransIdOnNode(self.__lastTrans) is False:
-                Utils.Print("ERROR: Failed to wait for last known transaction(%s) on root node." %
-                            (self.__lastTrans))
+                Utils.Print(
+                    f"ERROR: Failed to wait for last known transaction({self.__lastTrans}) on root node."
+                )
                 return False;
 
         targetHeadBlockNum=self.nodes[0].getHeadBlockNum() #get root nodes head block num
@@ -1346,10 +1285,10 @@ class Cluster(object):
     def createAccountKeys(count):
         accounts=[]
         p = re.compile('Private key: (.+)\nPublic key: (.+)\n', re.MULTILINE)
-        for i in range(0, count):
+        for _ in range(0, count):
             try:
-                cmd="%s create key" % (Utils.EosClientPath)
-                Utils.Debug and Utils.Print("cmd: %s" % (cmd))
+                cmd = f"{Utils.EosClientPath} create key"
+                Utils.Debug and Utils.Print(f"cmd: {cmd}")
                 keyStr=subprocess.check_output(cmd.split(), stderr=subprocess.STDOUT).decode("utf-8")
                 m=p.match(keyStr)
                 if m is None:
@@ -1359,8 +1298,8 @@ class Cluster(object):
                 ownerPrivate=m.group(1)
                 ownerPublic=m.group(2)
 
-                cmd="%s create key" % (Utils.EosClientPath)
-                Utils.Debug and Utils.Print("cmd: %s" % (cmd))
+                cmd = f"{Utils.EosClientPath} create key"
+                Utils.Debug and Utils.Print(f"cmd: {cmd}")
                 keyStr=subprocess.check_output(cmd.split(), stderr=subprocess.STDOUT).decode("utf-8")
                 m=p.match(keyStr)
                 if m is None:
@@ -1380,7 +1319,7 @@ class Cluster(object):
 
             except subprocess.CalledProcessError as ex:
                 msg=ex.output.decode("utf-8")
-                Utils.Print("ERROR: Exception during key creation. %s" % (msg))
+                Utils.Print(f"ERROR: Exception during key creation. {msg}")
                 break
 
         if count != len(accounts):
@@ -1403,20 +1342,30 @@ class Cluster(object):
                 Utils.Print("Account keys creation failed.")
                 return False
 
-        Utils.Print("Importing keys for account %s into wallet %s." % (self.initaAccount.name, wallet.name))
+        Utils.Print(
+            f"Importing keys for account {self.initaAccount.name} into wallet {wallet.name}."
+        )
         if not self.walletMgr.importKey(self.initaAccount, wallet):
-            Utils.Print("ERROR: Failed to import key for account %s" % (self.initaAccount.name))
+            Utils.Print(
+                f"ERROR: Failed to import key for account {self.initaAccount.name}"
+            )
             return False
 
-        Utils.Print("Importing keys for account %s into wallet %s." % (self.initbAccount.name, wallet.name))
+        Utils.Print(
+            f"Importing keys for account {self.initbAccount.name} into wallet {wallet.name}."
+        )
         if not self.walletMgr.importKey(self.initbAccount, wallet):
-            Utils.Print("ERROR: Failed to import key for account %s" % (self.initbAccount.name))
+            Utils.Print(
+                f"ERROR: Failed to import key for account {self.initbAccount.name}"
+            )
             return False
 
         for account in accounts:
-            Utils.Print("Importing keys for account %s into wallet %s." % (account.name, wallet.name))
+            Utils.Print(
+                f"Importing keys for account {account.name} into wallet {wallet.name}."
+            )
             if not self.walletMgr.importKey(account, wallet):
-                Utils.Print("ERROR: Failed to import key for account %s" % (account.name))
+                Utils.Print(f"ERROR: Failed to import key for account {account.name}")
                 return False
 
         self.accounts=accounts

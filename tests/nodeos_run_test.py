@@ -18,7 +18,7 @@ errorExit=testUtils.Utils.errorExit
 
 
 def cmdError(name, code=0, exitNow=False):
-    msg="FAILURE - %s%s" % (name, ("" if code == 0 else (" returned error code %d" % code)))
+    msg = f'FAILURE - {name}{"" if code == 0 else " returned error code %d" % code}'
     if exitNow:
         errorExit(msg, True)
     else:
